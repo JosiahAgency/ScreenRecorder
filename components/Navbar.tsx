@@ -4,13 +4,15 @@ import React from 'react'
 import Link from "next/link";
 import Image from "next/image";
 import {useRouter} from "next/navigation";
+import {authClient} from "@/lib/auth-client";
 
-const user = {}
 
 const Navbar = () => {
 
     const router = useRouter()
+    const {data: session} = authClient.useSession();
 
+    const user = session?.user
 
     return (
         <header className='navbar'>
@@ -19,11 +21,10 @@ const Navbar = () => {
                     <Image src='/assets/icons/logo.svg' alt='logo' width={32} height={32}/>
                     <h1 className='capitalize'>loom cast</h1>
                 </Link>
-
                 {user && (
                     <figure>
-                        <button onClick={() => router.push('/profile/123')} className='cursor-pointer'>
-                            <Image src='/assets/images/dummy.jpg' alt='user' width={36} height={36}
+                        <button onClick={() => router.push(`/profile/${user?.id}`)} className='cursor-pointer'>
+                            <Image src={user.image || ''} alt='user' width={36} height={36}
                                    className='aspect-square rounded-full'/>
                         </button>
                         <button className='cursor-pointer'>
