@@ -9,7 +9,7 @@ import {revalidatePath} from "next/cache";
 import aj from "@/lib/arcjet";
 import {fixedWindow} from "arcjet";
 import {request} from "@arcjet/next";
-import {and, eq, or, sql} from "drizzle-orm";
+import {and, eq, or, sql, desc} from "drizzle-orm";
 import {db} from "@/drizzle/db";
 
 const VIDEO_STREAM_BASE_URL = BUNNY.STREAM_BASE_URL;
@@ -180,3 +180,64 @@ export const getVideoById = withErrorHandling(async (videoId: string) => {
 
     return videoRecord;
 })
+
+export const getAllVideosByUser = withErrorHandling(
+    async (
+        userIdParameter: string,
+        searchQuery?: string = "",
+        sortFilter?: string
+    ) => {
+        const currentUserId = (
+            await auth.api.getSession({headers: await headers()})
+        )?.user.id;
+        const isOwner = userIdParameter === currentUserId;
+
+        const [userInfo] = await db
+            .select({
+                id: user.id,
+                name: user.name,
+                image: user.image,
+                email: user.email,
+            })
+            .from(user)
+            .where(eq(user.id, userIdParameter));
+
+        if (!userInfo) throw new Error("User not found");
+
+        const conditions = [
+            eq(videos.userId, userIdParameter),
+            !isOwner && eq(videos.visibility, "public"),
+            searchQuery.trim() && ilike(videos.title, `%${searchQuery}%`),
+        ].filter(Boolean) as any[];
+
+        const userVideos = await buildVideoWithUserQuery()
+            .where(...conditions)
+            .orderBy(
+                sortFilter ? getOrderByClause(sortFilter) : desc(videos.createdAt)
+            );
+
+        // let userVideos = [];
+        //
+        // try {
+        //     console.log("Building query...");
+        //
+        //     const query = buildVideoWithUserQuery()
+        //         .where(and(...conditions))
+        //         .orderBy(
+        //             sortFilter ? getOrderByClause(sortFilter) : desc(videos.createdAt)
+        //         );
+        //
+        //     console.log("Executing query...");
+        //     userVideos = await query;
+        //
+        //     console.log(`Query success. Found ${userVideos.length} videos.`);
+        // } catch (err) {
+        //     console.error("Error fetching videos:", err);
+        // }
+        //
+        //
+        // console.log(`Fetched ${userVideos.length} videos for user "${userInfo.name}"`);
+
+        return {user: userInfo, videos: userVideos, count: userVideos.length};
+    }
+);

@@ -11,7 +11,6 @@ const Navbar = () => {
 
     const router = useRouter()
     const {data: session} = authClient.useSession();
-
     const user = session?.user
 
     return (
@@ -23,14 +22,33 @@ const Navbar = () => {
                 </Link>
                 {user && (
                     <figure>
-                        <button onClick={() => router.push(`/profile/${user?.id}`)} className='cursor-pointer'>
+                        <button onClick={() =>
+                            router.push(`/profile/${session?.user.id}`)}
+                                className='cursor-pointer'>
                             <Image src={user.image || ''} alt='user' width={36} height={36}
                                    className='aspect-square rounded-full'/>
                         </button>
-                        <button className='cursor-pointer'>
-                            <Image src='/assets/icons/logout.svg' alt='logout' width={24} height={24}
-                                   className='rotate-180 '/>
+                        <button
+                            onClick={async () => {
+                                return await authClient.signOut({
+                                    fetchOptions: {
+                                        onSuccess: () => {
+                                            redirect("/sign-in");
+                                        },
+                                    },
+                                });
+                            }}
+                            className="cursor-pointer"
+                        >
+                            <Image
+                                src="/assets/icons/logout.svg"
+                                alt="logout"
+                                width={24}
+                                height={24}
+                                className="rotate-180"
+                            />
                         </button>
+
                     </figure>
                 )}
             </nav>
